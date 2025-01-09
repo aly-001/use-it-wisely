@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Projection Calculator</title>
+    <style>
+      body {
+        margin: 24px;
+        font-family: sans-serif;
+      }
+      .calculator {
+        max-width: 600px;
+      }
+      .input-group {
+        margin-bottom: 8px;
+      }
+      label {
+        display: inline-block;
+        width: 200px;
+      }
+      input[type="range"] {
+        width: 300px;
+      }
+      table {
+        margin-top: 16px;
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th, td {
+        border: 1px solid #ccc;
+        padding: 4px;
+        text-align: right;
+      }
+      th {
+        background: #eee;
+      }
+      #result {
+        margin-top: 16px;
+      }
+      .chart-container {
+        width: 100%;
+        max-width: 600px;
+        margin-top: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div class="calculator">
+        <div class="input-group">
+          <label for="currentAge">Current Age:</label>
+          <input type="number" id="currentAge" value="35" min="0" max="120">
+        </div>
+        <div class="input-group">
+          <label for="province">Province:</label>
+          <select id="province">
+            <option value="ON">Ontario</option>
+            <option value="BC">British Columbia</option>
+            <option value="AB">Alberta</option>
+            <option value="QC">Quebec</option>
+            <option value="MB">Manitoba</option>
+            <option value="SK">Saskatchewan</option>
+            <option value="NS">Nova Scotia</option>
+            <option value="NB">New Brunswick</option>
+            <option value="NL">Newfoundland and Labrador</option>
+            <option value="PE">Prince Edward Island</option>
+            <option value="YT">Yukon</option>
+            <option value="NT">Northwest Territories</option>
+            <option value="NU">Nunavut</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label for="lifeExpectancy">Life Expectancy:</label>
+          <input type="number" id="lifeExpectancy" value="95" min="0" max="120">
+        </div>
+        <div class="input-group">
+          <label for="lastSalaryYear">Last Salary Year:</label>
+          <input type="number" id="lastSalaryYear" value="20" min="0" max="100">
+        </div>
+        <div class="input-group">
+          <label for="annualSalary">Annual Salary:</label>
+          <input type="number" id="annualSalary" value="50000" min="0">
+        </div>
+        <div class="input-group">
+          <label for="annualExpenses">Annual Expenses:</label>
+          <input type="number" id="annualExpenses" value="50000" min="0">
+        </div>
+        <div class="input-group">
+          <label for="annualHealthcareExpenses">Annual Healthcare Expenses:</label>
+          <input type="number" id="annualHealthcareExpenses" value="0" min="0">
+        </div>
+        <div class="input-group">
+          <label>Use Retirement Stages:</label>
+          <input type="checkbox" id="useStages">
+        </div>
+
+        <div id="stagesContainer" style="display: none; margin-left: 20px;">
+          <h3>Retirement Stage 1: Current Age to 75</h3>
+          <div class="input-group">
+            <label for="stageOneExpenses">Annual Expenses:</label>
+            <input type="number" id="stageOneExpenses" value="50000" min="0">
+          </div>
+          <div class="input-group">
+            <label for="stageOneHealthcare">Healthcare Expenses:</label>
+            <input type="number" id="stageOneHealthcare" value="0" min="0">
+          </div>
+
+          <h3>Retirement Stage 2: Ages 76 to 85</h3>
+          <div class="input-group">
+            <label for="stageTwoExpenses">Annual Expenses:</label>
+            <input type="number" id="stageTwoExpenses" value="45000" min="0">
+          </div>
+          <div class="input-group">
+            <label for="stageTwoHealthcare">Healthcare Expenses:</label>
+            <input type="number" id="stageTwoHealthcare" value="5000" min="0">
+          </div>
+
+          <h3>Retirement Stage 3: Ages 86+</h3>
+          <div class="input-group">
+            <label for="stageThreeExpenses">Annual Expenses:</label>
+            <input type="number" id="stageThreeExpenses" value="40000" min="0">
+          </div>
+          <div class="input-group">
+            <label for="stageThreeHealthcare">Healthcare Expenses:</label>
+            <input type="number" id="stageThreeHealthcare" value="10000" min="0">
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label for="initialInvestment">Initial Investment:</label>
+          <input type="number" id="initialInvestment" value="500000" min="0">
+        </div>
+        <div class="input-group">
+          <label for="startYear">Current Year:</label>
+          <input type="number" id="startYear" value="2024" min="2024" max="2100">
+        </div>
+        <div id="registered-accounts-container">
+          <div class="registered-accounts-header">
+            <h3>Registered Accounts</h3>
+            <button id="add-account-btn">Add Account</button>
+          </div>
+          <div id="registered-accounts-list">
+            <!-- Dynamic accounts will be added here -->
+          </div>
+        </div>
+        <div class="input-group">
+          <label>
+            <input type="checkbox" id="willSellHome"> Plan to sell home
+          </label>
+        </div>
+        <div id="homeSaleDetails" style="display: none; margin-left: 20px;">
+          <div class="input-group">
+            <label for="homeSaleYear">Sale Year:</label>
+            <input type="number" id="homeSaleYear" value="2030" min="2024" max="2100">
+          </div>
+          <div class="input-group">
+            <label for="homeSaleAmount">Sale Amount:</label>
+            <input type="number" id="homeSaleAmount" value="500000" min="0">
+          </div>
+        </div>
+        <div class="input-group">
+          <label for="rateOfReturn">Investment Return (%):</label>
+          <input type="number" id="rateOfReturn" value="7" min="0" max="100" step="0.1">
+        </div>
+        <div class="input-group">
+          <label for="inflationRate">Estimated Inflation (%):</label>
+          <input type="number" id="inflationRate" value="2" min="0" max="100" step="0.1">
+        </div>
+        <div class="input-group">
+          <label for="oasStartYear">OAS Start Year:</label>
+          <input type="number" id="oasStartYear" value="1" min="1" max="100">
+        </div>
+        <div class="input-group">
+          <label for="oasAnnualAmount">OAS Annual Amount:</label>
+          <input type="number" id="oasAnnualAmount" value="8301" min="0">
+        </div>
+
+        <div id="one-off-expenses-container">
+          <h3>One-off Expenses</h3>
+          <button id="add-expense-btn">Add One-off Expense</button>
+          <div id="one-off-expenses-list">
+            <!-- Dynamic expenses will be added here -->
+          </div>
+        </div>
+
+        <button id="calculateBtn">Calculate</button>
+        
+        <div id="result"></div>
+        
+        <div class="chart-container">
+          <canvas id="projectionChart"></canvas>
+        </div>
+        
+        <table>
+          <thead>
+            <tr>
+              <th>Year</th>
+              <th>Investments</th>
+              <th>RRSP</th>
+              <th>TFSA</th>
+              <th>Total</th>
+              <th>Salary</th>
+              <th>Investment Income</th>
+              <th>RRSP Withdrawal</th>
+              <th>Credits</th>
+              <th>Debits</th>
+              <th>Tax Paid</th>
+              <th>Total Expenses</th>
+              <th>OAS</th>
+              <th>OAS Clawback</th>
+            </tr>
+          </thead>
+          <tbody id="projectionTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <script type="module" src="./src/index.ts"></script>
+  </body>
+</html>
