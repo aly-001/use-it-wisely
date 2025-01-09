@@ -196,8 +196,7 @@ export const ProjectionLogic = {
     startYear: number,
     currentAge: number,
     lifeExpectancy: number,
-    lastSalaryYear: number,
-    annualSalary: number,
+    yearlyIncomes: number[],
     baseAnnualExpenses: number,
     initialInvestment: number,
     initialRRSP: number,
@@ -250,7 +249,7 @@ export const ProjectionLogic = {
         calendarYear: startYear + i - 1,
         age: personAge,
         
-        salary: i <= lastSalaryYear ? annualSalary : 0,
+        salary: yearlyIncomes[i] || 0,
 
         // Non-registered
         amountInvested: i === 1 ? initialInvestment : 0,
@@ -300,6 +299,10 @@ export const ProjectionLogic = {
 
         // Home Sale
         homeSaleProceeds: isHomeSaleYear ? homeSaleAmount : 0,
+
+        // New fields for income tracking
+        employmentIncome: yearlyIncomes[i] || 0,
+        otherIncomes: [],  // This will be populated with the specific other incomes for this year
       });
     }
     return projection;

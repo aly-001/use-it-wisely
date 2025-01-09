@@ -1,7 +1,7 @@
 // ui-controller.ts
 
 import { ProjectionLogic } from './projection-logic';
-import { YearData, Projection, OneOffExpense } from './data-types';
+import { YearData, Projection, OneOffExpense, OtherIncome } from './data-types';
 import { Chart, ChartConfiguration } from 'chart.js/auto';
 
 type RegisteredAccountType = 'RRSP' | 'TFSA' | 'RRIF' | 'LIRA' | 'LIF';
@@ -12,6 +12,16 @@ interface RegisteredAccount {
 }
 
 export const UIController = {
+  // === DOM Elements ===
+  employmentIncomeInput: document.querySelector<HTMLInputElement>('#employmentIncome')!,
+  employmentIncomeStartYearSelect: document.querySelector<HTMLSelectElement>('#employmentIncomeStartYear')!,
+  employmentIncomeEndYearSelect: document.querySelector<HTMLSelectElement>('#employmentIncomeEndYear')!,
+  addOtherIncomeBtn: document.querySelector<HTMLButtonElement>('#add-other-income-btn')!,
+  otherIncomesList: document.querySelector<HTMLDivElement>('#other-incomes-list')!,
+
+  // Track other incomes
+  otherIncomes: [] as OtherIncome[],
+
   // === DOM Elements ===
   lastSalaryYearInput: document.querySelector<HTMLInputElement>('#lastSalaryYear')!,
   annualSalaryInput: document.querySelector<HTMLInputElement>('#annualSalary')!,
@@ -275,16 +285,186 @@ export const UIController = {
   },
 
   /**
+   * Creates a new other income UI element
+   */
+  createOtherIncomeElement(income?: OtherIncome): HTMLDivElement {
+    const incomeItem = document.createElement('div');
+    incomeItem.className = 'other-income-item';
+    incomeItem.style.marginBottom = '10px';
+
+    const amountInput = document.createElement('input');
+    amountInput.type = 'number';
+    amountInput.min = '0';
+    amountInput.placeholder = 'Amount';
+    amountInput.value = income ? income.amount.toString() : '0';
+
+    const startYearInput = document.createElement('input');
+    startYearInput.type = 'number';
+    startYearInput.min = this.startYearInput.value;
+    startYearInput.max = (Number(this.startYearInput.value) + Number(this.lifeExpectancyInput.value) - Number(this.currentAgeInput.value)).toString();
+    startYearInput.placeholder = 'Start Year';
+    startYearInput.value = income ? income.startYear.toString() : this.startYearInput.value;
+
+    const endYearInput = document.createElement('input');
+    endYearInput.type = 'number';
+    endYearInput.min = startYearInput.value;
+    endYearInput.max = (Number(this.startYearInput.value) + Number(this.lifeExpectancyInput.value) - Number(this.currentAgeInput.value)).toString();
+    endYearInput.placeholder = 'End Year';
+    endYearInput.value = income ? income.endYear.toString() : startYearInput.value;
+
+    const descriptionInput = document.createElement('input');
+    descriptionInput.type = 'text';
+    descriptionInput.placeholder = 'Description (optional)';
+    descriptionInput.value = income?.description || '';
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'remove-income-btn';
+    removeBtn.textContent = 'Remove';
+    removeBtn.onclick = () => {
+      incomeItem.remove();
+      this.updateOtherIncomes();
+    };
+
+    // Add labels and layout
+    const amountLabel = document.createElement('span');
+    amountLabel.textContent = 'Amount: ';
+    const startYearLabel = document.createElement('span');
+    startYearLabel.textContent = 'Start Year: ';
+    const endYearLabel = document.createElement('span');
+    endYearLabel.textContent = 'End Year: ';
+    const descriptionLabel = document.createElement('span');
+    descriptionLabel.textContent = 'Description: ';
+
+    incomeItem.appendChild(amountLabel);
+    incomeItem.appendChild(amountInput);
+    incomeItem.appendChild(document.createElement('br'));
+    incomeItem.appendChild(startYearLabel);
+    incomeItem.appendChild(startYearInput);
+    incomeItem.appendChild(document.createElement('br'));
+    incomeItem.appendChild(endYearLabel);
+    incomeItem.appendChild(endYearInput);
+    incomeItem.appendChild(document.createElement('br'));
+    incomeItem.appendChild(descriptionLabel);
+    incomeItem.appendChild(descriptionInput);
+    incomeItem.appendChild(document.createElement('br'));
+    incomeItem.appendChild(removeBtn);
+
+    // Update other incomes when values change
+    startYearInput.onchange = () => {
+      if (Number(endYearInput.value) < Number(startYearInput.value)) {
+        endYearInput.value = startYearInput.value;
+      }
+      this.updateOtherIncomes();
+    };
+    endYearInput.onchange = () => {
+      if (Number(endYearInput.value) < Number(startYearInput.value)) {
+        startYearInput.value = endYearInput.value;
+      }
+      this.updateOtherIncomes();
+    };
+    amountInput.onchange = () => this.updateOtherIncomes();
+    descriptionInput.onchange = () => this.updateOtherIncomes();
+
+    return incomeItem;
+  },
+
+  /**
+   * Updates the internal other incomes array based on UI state
+   */
+  updateOtherIncomes() {
+    this.otherIncomes = [];
+    const incomeItems = this.otherIncomesList.querySelectorAll('.other-income-item');
+    incomeItems.forEach(item => {
+      const inputs = item.querySelectorAll('input');
+      const [amountInput, startYearInput, endYearInput, descriptionInput] = inputs;
+      this.otherIncomes.push({
+        amount: Number(amountInput.value),
+        startYear: Number(startYearInput.value),
+        endYear: Number(endYearInput.value),
+        description: descriptionInput.value || undefined
+      });
+    });
+  },
+
+  /**
+   * Populates the employment income year selects with options
+   */
+  populateEmploymentIncomeYears() {
+    this.employmentIncomeStartYearSelect.innerHTML = '';
+    this.employmentIncomeEndYearSelect.innerHTML = '';
+    
+    const startYear = Number(this.startYearInput.value);
+    const totalYears = Number(this.lifeExpectancyInput.value) - Number(this.currentAgeInput.value);
+    
+    for (let y = 0; y <= totalYears; y++) {
+      const calendarYear = startYear + y;
+      
+      const startOption = document.createElement('option');
+      startOption.value = calendarYear.toString();
+      startOption.textContent = calendarYear.toString();
+      this.employmentIncomeStartYearSelect.appendChild(startOption);
+
+      const endOption = document.createElement('option');
+      endOption.value = calendarYear.toString();
+      endOption.textContent = calendarYear.toString();
+      this.employmentIncomeEndYearSelect.appendChild(endOption);
+    }
+
+    // Set initial end year to match start year
+    this.employmentIncomeEndYearSelect.value = this.employmentIncomeStartYearSelect.value;
+
+    // Add change handler to ensure end year >= start year
+    this.employmentIncomeStartYearSelect.onchange = () => {
+      const startYear = Number(this.employmentIncomeStartYearSelect.value);
+      const endYear = Number(this.employmentIncomeEndYearSelect.value);
+      if (endYear < startYear) {
+        this.employmentIncomeEndYearSelect.value = this.employmentIncomeStartYearSelect.value;
+      }
+    };
+
+    this.employmentIncomeEndYearSelect.onchange = () => {
+      const startYear = Number(this.employmentIncomeStartYearSelect.value);
+      const endYear = Number(this.employmentIncomeEndYearSelect.value);
+      if (endYear < startYear) {
+        this.employmentIncomeStartYearSelect.value = this.employmentIncomeEndYearSelect.value;
+      }
+    };
+  },
+
+  /**
    * Main calculation routine triggered by the button.
    */
   recalculateProjection() {
     const startYear = Number(this.startYearInput.value);
     const currentAge = Number(this.currentAgeInput.value);
     const lifeExpectancy = Number(this.lifeExpectancyInput.value);
-    const lastSalaryYear = Number(this.lastSalaryYearInput.value);
-    const annualSalary = Number(this.annualSalaryInput.value);
+    const employmentIncome = Number(this.employmentIncomeInput.value);
+    const employmentStartYear = Number(this.employmentIncomeStartYearSelect.value);
+    const employmentEndYear = Number(this.employmentIncomeEndYearSelect.value);
+
+    // Build yearly incomes array
+    const totalYears = lifeExpectancy - currentAge;
+    const yearlyIncomes = new Array(totalYears + 1).fill(0);
+
+    // Add employment income for each year in the range
+    for (let year = employmentStartYear; year <= employmentEndYear; year++) {
+      const idx = year - startYear + 1;
+      if (idx > 0 && idx <= totalYears) {
+        yearlyIncomes[idx] += employmentIncome;
+      }
+    }
+
+    // Add other incomes
+    this.otherIncomes.forEach(inc => {
+      for (let year = inc.startYear; year <= inc.endYear; year++) {
+        const idx = year - startYear + 1;
+        if (idx > 0 && idx <= totalYears) {
+          yearlyIncomes[idx] += inc.amount;
+        }
+      }
+    });
+
     const annualExpenses = Number(this.annualExpensesInput.value);
-    const annualHealthcareExpenses = Number(this.annualHealthcareExpensesInput.value);
     const initialInvestment = Number(this.initialInvestmentInput.value);
     const totalReturn = Number(this.rateOfReturnInput.value) / 100;
     const inflationRate = Number(this.inflationRateInput.value) / 100;
@@ -349,8 +529,7 @@ export const UIController = {
       startYear,
       currentAge,
       lifeExpectancy,
-      lastSalaryYear,
-      annualSalary,
+      yearlyIncomes,
       annualExpenses,
       initialInvestment,
       initialRRSP,
@@ -470,6 +649,20 @@ export const UIController = {
         this.growthRateInput.value = (currentReturn * 0.5).toString();
       }
     });
+
+    // Add new event listeners
+    this.addOtherIncomeBtn.addEventListener('click', () => {
+      const incomeElement = this.createOtherIncomeElement();
+      this.otherIncomesList.appendChild(incomeElement);
+      this.updateOtherIncomes();
+    });
+
+    // Update employment income years when start year or life expectancy changes
+    this.startYearInput.addEventListener('change', () => this.populateEmploymentIncomeYears());
+    this.lifeExpectancyInput.addEventListener('change', () => this.populateEmploymentIncomeYears());
+
+    // Initial population of employment income years
+    this.populateEmploymentIncomeYears();
 
     // Perform an initial calculation on page load
     this.recalculateProjection();

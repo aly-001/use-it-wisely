@@ -7,6 +7,13 @@ export interface OneOffExpense {
   description?: string;
 }
 
+export interface OtherIncome {
+  startYear: number;
+  endYear: number;
+  amount: number;
+  description?: string;
+}
+
 export interface YearData {
   year: number;        // Relative year (1, 2, 3...)
   calendarYear: number; // Actual year (2024, 2025...)
@@ -62,6 +69,9 @@ export interface YearData {
 
   // Home Sale
   homeSaleProceeds: number;  // Amount received from home sale in this year
+
+  employmentIncome: number;  // New field for employment income
+  otherIncomes: OtherIncome[];  // New field for other incomes
 }
 
 export type Projection = YearData[];
