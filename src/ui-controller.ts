@@ -17,10 +17,10 @@ export const UIController = {
   annualSalaryInput: document.querySelector<HTMLInputElement>('#annualSalary')!,
   annualExpensesInput: document.querySelector<HTMLInputElement>('#annualExpenses')!,
   annualHealthcareExpensesInput: document.querySelector<HTMLInputElement>('#annualHealthcareExpenses')!,
-  
+
   // Add province selector
   provinceSelector: document.querySelector<HTMLSelectElement>('#province')!,
-  
+
   // Staged expenses inputs
   useStagesCheckbox: document.querySelector<HTMLInputElement>('#useStages')!,
   stagesContainer: document.querySelector<HTMLDivElement>('#stagesContainer')!,
@@ -32,13 +32,16 @@ export const UIController = {
   stageThreeHealthcareInput: document.querySelector<HTMLInputElement>('#stageThreeHealthcare')!,
 
   initialInvestmentInput: document.querySelector<HTMLInputElement>('#initialInvestment')!,
-  rateOfReturnInput: document.querySelector<HTMLInputElement>('#rateOfReturn')!,
+  rateOfReturnInput: document.querySelector<HTMLSelectElement>('#rateOfReturn')!,
+  specifyOwnRatesCheckbox: document.querySelector<HTMLInputElement>('#specifyOwnRates')!,
+  incomeRateInput: document.querySelector<HTMLInputElement>('#incomeRate')!,
+  growthRateInput: document.querySelector<HTMLInputElement>('#growthRate')!,
   calculateBtn: document.querySelector<HTMLButtonElement>('#calculateBtn')!,
-  
+
   projectionChartCanvas: document.querySelector<HTMLCanvasElement>('#projectionChart')!,
   projectionTableBody: document.querySelector<HTMLTableSectionElement>('#projectionTableBody')!,
   resultDiv: document.querySelector<HTMLDivElement>('#result')!,
-  
+
   chart: null as Chart | null,
 
   oasStartYearInput: document.querySelector<HTMLInputElement>('#oasStartYear')!,
@@ -52,7 +55,7 @@ export const UIController = {
   // New registered accounts elements
   addAccountBtn: document.querySelector<HTMLButtonElement>('#add-account-btn')!,
   registeredAccountsList: document.querySelector<HTMLDivElement>('#registered-accounts-list')!,
-  
+
   // Track registered accounts
   registeredAccounts: [] as RegisteredAccount[],
 
@@ -68,7 +71,7 @@ export const UIController = {
   // One-off expenses elements
   addExpenseBtn: document.querySelector<HTMLButtonElement>('#add-expense-btn')!,
   oneOffExpensesList: document.querySelector<HTMLDivElement>('#one-off-expenses-list')!,
-  
+
   // Track one-off expenses
   oneOffExpenses: [] as OneOffExpense[],
 
@@ -221,12 +224,12 @@ export const UIController = {
    */
   fillProjectionTable(projection: Projection) {
     this.projectionTableBody.innerHTML = '';
-    
+
     projection.forEach((yearData: YearData) => {
       const totalAssets = yearData.amountInvested + yearData.amountInRRSP + yearData.amountInTFSA;
       const row = document.createElement('tr');
-      
-      const homeSaleDisplay = yearData.homeSaleProceeds > 0 
+
+      const homeSaleDisplay = yearData.homeSaleProceeds > 0
         ? `<br/>(+${ProjectionLogic.formatMoney(yearData.homeSaleProceeds)} home sale)`
         : '';
 
@@ -283,11 +286,51 @@ export const UIController = {
     const annualExpenses = Number(this.annualExpensesInput.value);
     const annualHealthcareExpenses = Number(this.annualHealthcareExpensesInput.value);
     const initialInvestment = Number(this.initialInvestmentInput.value);
-    const rateOfReturn = Number(this.rateOfReturnInput.value) / 100;
+    const totalReturn = Number(this.rateOfReturnInput.value) / 100;
     const inflationRate = Number(this.inflationRateInput.value) / 100;
     const oasStartYear = Number(this.oasStartYearInput.value);
     const oasAnnualAmount = Number(this.oasAnnualAmountInput.value);
     const province = this.provinceSelector.value;
+
+    let realIncomeRate: number;
+    let realGrowthRate: number;
+
+    if (this.specifyOwnRatesCheckbox.checked) {
+      const nominalIncomeRate = Number(this.incomeRateInput.value);  // e.g. 4
+      const nominalGrowthRate = Number(this.growthRateInput.value);  // e.g. 4
+      const sumRates = nominalIncomeRate + nominalGrowthRate;        // 4 + 4 = 8
+    
+      // If the user typed 0 in both, avoid dividing by zero
+      if (sumRates <= 0) {
+        realIncomeRate = 0;
+        realGrowthRate = 0;
+      } else {
+        // Subtract inflation from the total
+        const inflationRate = Number(this.inflationRateInput.value);
+        const realTotal = sumRates - inflationRate;  // 8 - 2 = 6
+    
+        // Pro-rate by the same ratio as the nominal inputs
+        // ratioIncome = 4/8 = 0.5, ratioGrowth = 4/8 = 0.5
+        const ratioIncome = nominalIncomeRate / sumRates; 
+        const ratioGrowth = nominalGrowthRate / sumRates; 
+    
+        // Convert to decimals for final usage in the projection logic:
+        // e.g. 6 * 0.5 = 3
+        realIncomeRate = (realTotal * ratioIncome) / 100; // => 3/100 => 0.03
+        realGrowthRate = (realTotal * ratioGrowth) / 100; // => 3/100 => 0.03
+      }
+    } else {
+      const totalReturn = Number(this.rateOfReturnInput.value);  // e.g. 8
+      const inflationRate = Number(this.inflationRateInput.value); // e.g. 2
+      const realReturn = totalReturn - inflationRate;             // 8 - 2 = 6
+    
+      // We always do 50/50 split
+      realIncomeRate = (realReturn * 0.5) / 100;  // => 3/100 => 0.03
+      realGrowthRate = (realReturn * 0.5) / 100;  // => 3/100 => 0.03
+    }
+
+    console.log(`Real income rate: ${realIncomeRate}`);
+    console.log(`Real growth rate: ${realGrowthRate}`);
 
     // Get totals from registered accounts
     const initialRRSP = this.getAccountTypeTotal('RRSP');
@@ -295,8 +338,6 @@ export const UIController = {
     const initialRRIF = this.getAccountTypeTotal('RRIF');
     const initialLIRA = this.getAccountTypeTotal('LIRA');
     const initialLIF = this.getAccountTypeTotal('LIF');
-
-    const realReturn = rateOfReturn - inflationRate;
 
     // Convert calendar year to relative year for home sale
     const willSellHome = this.willSellHomeCheckbox.checked;
@@ -331,7 +372,7 @@ export const UIController = {
       this.oneOffExpenses
     );
 
-    const finalProjection = ProjectionLogic.calculateProjection(projection, realReturn);
+    const finalProjection = ProjectionLogic.calculateProjection(projection, realIncomeRate, realGrowthRate);
     this.createOrUpdateChart(finalProjection);
     this.fillProjectionTable(finalProjection);
 
@@ -381,9 +422,9 @@ export const UIController = {
 
     // Add stages checkbox handler
     this.useStagesCheckbox.addEventListener('change', (e) => {
-      this.stagesContainer.style.display = 
+      this.stagesContainer.style.display =
         (e.target as HTMLInputElement).checked ? 'block' : 'none';
-      
+
       // Copy current expenses to stage one if enabling stages
       if ((e.target as HTMLInputElement).checked) {
         this.stageOneExpensesInput.value = this.annualExpensesInput.value;
@@ -393,7 +434,7 @@ export const UIController = {
 
     // Add home sale checkbox handler
     this.willSellHomeCheckbox.addEventListener('change', (e) => {
-      this.homeSaleDetailsDiv.style.display = 
+      this.homeSaleDetailsDiv.style.display =
         (e.target as HTMLInputElement).checked ? 'block' : 'none';
     });
 
@@ -413,6 +454,23 @@ export const UIController = {
       this.updateOneOffExpenses();
     };
 
+    // Add rate specification checkbox handler
+    this.specifyOwnRatesCheckbox.addEventListener('change', (e) => {
+      const customRatesContainer = document.querySelector<HTMLDivElement>('#customRatesContainer')!;
+      const showCustomRates = (e.target as HTMLInputElement).checked;
+      
+      customRatesContainer.style.display = showCustomRates ? 'block' : 'none';
+      this.incomeRateInput.disabled = !showCustomRates;
+      this.growthRateInput.disabled = !showCustomRates;
+
+      // When enabling custom rates, initialize them to split the current total return
+      if (showCustomRates) {
+        const currentReturn = Number(this.rateOfReturnInput.value);
+        this.incomeRateInput.value = (currentReturn * 0.5).toString();
+        this.growthRateInput.value = (currentReturn * 0.5).toString();
+      }
+    });
+
     // Perform an initial calculation on page load
     this.recalculateProjection();
   },
@@ -430,7 +488,7 @@ export const UIController = {
     yearInput.max = (Number(this.startYearInput.value) + Number(this.lifeExpectancyInput.value) - Number(this.currentAgeInput.value)).toString();
     yearInput.placeholder = 'Year (e.g. 2050)';
     // If we have an expense, convert relative year to calendar year
-    yearInput.value = expense 
+    yearInput.value = expense
       ? (Number(this.startYearInput.value) + expense.year - 1).toString()
       : this.startYearInput.value;
 
@@ -501,7 +559,7 @@ export const UIController = {
       const calendarYear = Number(yearInput.value);
       // Convert calendar year to relative year
       const relativeYear = calendarYear - startYear + 1;
-      
+
       this.oneOffExpenses.push({
         year: relativeYear,
         amount: Number(amountInput.value),

@@ -333,13 +333,11 @@ export const ProjectionLogic = {
   calculateNextYear(
     projection: Projection,
     yearIndex: number,
-    nominalReturn: number
+    incomeRate: number,
+    growthRate: number
   ) {
     const RRSP_MAX = 30000;
     const TFSA_MAX = 30000;
-
-    const DIVIDEND_PORTION = 0.5; // portion of non-registered return considered immediate dividends
-    const CAPITAL_PORTION = 1 - DIVIDEND_PORTION;
 
     const thisYear = projection[yearIndex];
     const nextYear = (yearIndex + 1 < projection.length)
@@ -377,30 +375,25 @@ export const ProjectionLogic = {
     }
 
     // 1) Growth on each account
-    // For simplicity, assume the entire "nominalReturn" applies to all accounts
-    const nonRegGrowth = thisYear.amountInvested * CAPITAL_PORTION * nominalReturn;
-    const rrspGrowth   = thisYear.amountInRRSP * nominalReturn; 
-    const tfsaGrowth   = thisYear.amountInTFSA * nominalReturn;
-    const rrifGrowth = thisYear.amountInRRIF * nominalReturn;
-    const liraGrowth = thisYear.amountInLIRA * nominalReturn;
-    const lifGrowth = thisYear.amountInLIF * nominalReturn;
+    // Apply growth rate to all accounts
+    const nonRegGrowth = thisYear.amountInvested * growthRate;
+    const rrspGrowth = thisYear.amountInRRSP * (incomeRate + growthRate); 
+    const tfsaGrowth = thisYear.amountInTFSA * (incomeRate + growthRate);
+    const rrifGrowth = thisYear.amountInRRIF * (incomeRate + growthRate);
+    const liraGrowth = thisYear.amountInLIRA * (incomeRate + growthRate);
+    const lifGrowth = thisYear.amountInLIF * (incomeRate + growthRate);
 
     // Increase principal by the growth (no immediate tax for TFSA or RRSP)
     thisYear.amountInvested += nonRegGrowth;
-    thisYear.amountInRRSP   += rrspGrowth;
-    thisYear.amountInTFSA   += tfsaGrowth;
+    thisYear.amountInRRSP += rrspGrowth;
+    thisYear.amountInTFSA += tfsaGrowth;
     thisYear.amountInRRIF += rrifGrowth;
     thisYear.amountInLIRA += liraGrowth;
     thisYear.amountInLIF += lifGrowth;
 
-    // 2) Dividends from non-registered
-    const dividends = thisYear.amountInvested * DIVIDEND_PORTION * nominalReturn;
-    // But to keep from double-counting growth, you might prefer to separate them more cleanly. 
-    // For now, let's keep it simple:
-    // We'll treat "investmentIncome" as the dividends from the *start-of-year* balance:
-    const oldNonRegBalance = thisYear.amountInvested - nonRegGrowth;
-    const dividendIncome = oldNonRegBalance * DIVIDEND_PORTION * nominalReturn;
-    thisYear.investmentIncome = dividendIncome;
+    // 2) Income from non-registered investments
+    const investmentIncome = thisYear.amountInvested * incomeRate;
+    thisYear.investmentIncome = investmentIncome;
 
     // 2.1) LIRA and LIF payouts if age > 65
     if (thisYear.age > 65) {
@@ -411,8 +404,8 @@ export const ProjectionLogic = {
       thisYear.salary += liraPayout + lifPayout; // Add LIRA and LIF payouts to taxable income
     }
 
-    // 3) Calculate initial tax on (salary + dividends)
-    const initialTaxableIncome = thisYear.salary + dividendIncome;
+    // 3) Calculate initial tax on (salary + investment income)
+    const initialTaxableIncome = thisYear.salary + investmentIncome;
     const initialTax = calculateTax(initialTaxableIncome);
     const totalDebit = totalExpenses + initialTax;
 
@@ -562,9 +555,9 @@ export const ProjectionLogic = {
    * 2. Calculate next year's values
    * 3. Return updated projection
    */
-  calculateProjection(projection: Projection, nominalReturn: number): Projection {
+  calculateProjection(projection: Projection, incomeRate: number, growthRate: number): Projection {
     for (let i = 0; i < projection.length - 1; i++) {
-      this.calculateNextYear(projection, i, nominalReturn);
+      this.calculateNextYear(projection, i, incomeRate, growthRate);
     }
     return projection;
   },
