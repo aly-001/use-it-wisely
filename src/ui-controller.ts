@@ -42,6 +42,8 @@ export const UIController = {
   stageThreeHealthcareInput: document.querySelector<HTMLInputElement>('#stageThreeHealthcare')!,
 
   initialInvestmentInput: document.querySelector<HTMLInputElement>('#initialInvestment')!,
+  initialBookValueInput: document.querySelector<HTMLInputElement>('#initialBookValue')!,
+  
   rateOfReturnInput: document.querySelector<HTMLSelectElement>('#rateOfReturn')!,
   specifyOwnRatesCheckbox: document.querySelector<HTMLInputElement>('#specifyOwnRates')!,
   incomeRateInput: document.querySelector<HTMLInputElement>('#incomeRate')!,
@@ -54,8 +56,10 @@ export const UIController = {
 
   chart: null as Chart | null,
 
-  oasStartYearInput: document.querySelector<HTMLInputElement>('#oasStartYear')!,
+  oasStartAge: document.querySelector<HTMLInputElement>('#oasStartAge')!,
   oasAnnualAmountInput: document.querySelector<HTMLInputElement>('#oasAnnualAmount')!,
+  isReceivingOAS: document.querySelector<HTMLInputElement>('#isReceivingOAS')!,
+  oasFutureDetails: document.querySelector<HTMLDivElement>('#oas-future-details')!,
 
   inflationRateInput: document.querySelector<HTMLInputElement>('#inflationRate')!,
 
@@ -84,6 +88,18 @@ export const UIController = {
 
   // Track one-off expenses
   oneOffExpenses: [] as OneOffExpense[],
+
+  // Add new DOM elements near the top with other element declarations
+  isReceivingCPP: document.querySelector<HTMLInputElement>('#isReceivingCPP')!,
+  cppStartAge: document.querySelector<HTMLInputElement>('#cppStartAge')!,
+  cppAnnualAmount: document.querySelector<HTMLInputElement>('#cppAnnualAmount')!,
+  cppFutureDetails: document.querySelector<HTMLDivElement>('#cpp-future-details')!,
+
+  // Add new DOM elements near the CPP elements
+  isReceivingDB: document.querySelector<HTMLInputElement>('#isReceivingDB')!,
+  dbStartAge: document.querySelector<HTMLInputElement>('#dbStartAge')!,
+  dbAnnualAmount: document.querySelector<HTMLInputElement>('#dbAnnualAmount')!,
+  dbFutureDetails: document.querySelector<HTMLDivElement>('#db-future-details')!,
 
   /**
    * Creates a new registered account UI element
@@ -127,6 +143,7 @@ export const UIController = {
 
     return accountItem;
   },
+
 
   /**
    * Updates the internal registered accounts array based on UI state
@@ -442,9 +459,24 @@ export const UIController = {
     const employmentStartYear = Number(this.employmentIncomeStartYearSelect.value);
     const employmentEndYear = Number(this.employmentIncomeEndYearSelect.value);
 
+    // Add CPP/QPP calculations
+    const isReceivingCPP = this.isReceivingCPP.checked;
+    const cppStartAge = isReceivingCPP ? currentAge : Number(this.cppStartAge.value);
+    const cppAnnualAmount = Number(this.cppAnnualAmount.value);
+    
+    // Calculate which year CPP/QPP starts (relative to start year)
+    const cppStartYear = cppStartAge - currentAge + 1;
+
     // Build yearly incomes array
     const totalYears = lifeExpectancy - currentAge;
     const yearlyIncomes = new Array(totalYears + 1).fill(0);
+
+
+    const isReceivingOAS = this.isReceivingOAS.checked;
+    const oasStartAge = isReceivingOAS ? currentAge : Number(this.oasStartAge.value);
+    // Calculate which year OAS starts (relative to start year)
+    const oasStartYear = oasStartAge - currentAge + 1;
+    const oasAnnualAmount = Number(this.oasAnnualAmountInput.value);
 
     // Add employment income for each year in the range
     for (let year = employmentStartYear; year <= employmentEndYear; year++) {
@@ -464,12 +496,35 @@ export const UIController = {
       }
     });
 
+    // Add CPP/QPP to yearly incomes
+    for (let year = cppStartYear; year <= totalYears; year++) {
+      if (year > 0) {  // Only add if after start year
+        yearlyIncomes[year] += cppAnnualAmount;
+      }
+    }
+
+    // Add DB Pension calculations (after CPP calculations)
+    const isReceivingDB = this.isReceivingDB.checked;
+    const dbStartAge = isReceivingDB ? currentAge : Number(this.dbStartAge.value);
+    const dbAnnualAmount = Number(this.dbAnnualAmount.value);
+    
+    // Calculate which year DB Pension starts (relative to start year)
+    const dbStartYear = dbStartAge - currentAge + 1;
+
+    // Add DB Pension to yearly incomes (after CPP)
+    for (let year = dbStartYear; year <= totalYears; year++) {
+      if (year > 0) {  // Only add if after start year
+        yearlyIncomes[year] += dbAnnualAmount;
+      }
+    }
+
+
+
     const annualExpenses = Number(this.annualExpensesInput.value);
     const initialInvestment = Number(this.initialInvestmentInput.value);
+    const initialBookValue = Number(this.initialBookValueInput.value);
     const totalReturn = Number(this.rateOfReturnInput.value) / 100;
     const inflationRate = Number(this.inflationRateInput.value) / 100;
-    const oasStartYear = Number(this.oasStartYearInput.value);
-    const oasAnnualAmount = Number(this.oasAnnualAmountInput.value);
     const province = this.provinceSelector.value;
 
     let realIncomeRate: number;
@@ -525,6 +580,7 @@ export const UIController = {
     const homeSaleYear = homeSaleCalendarYear ? homeSaleCalendarYear - startYear + 1 : null;
     const homeSaleAmount = willSellHome ? Number(this.homeSaleAmountInput.value) : 0;
 
+
     const projection = ProjectionLogic.createInitialProjection(
       startYear,
       currentAge,
@@ -532,6 +588,7 @@ export const UIController = {
       yearlyIncomes,
       annualExpenses,
       initialInvestment,
+      initialBookValue,
       initialRRSP,
       oasStartYear,
       oasAnnualAmount,
@@ -663,6 +720,24 @@ export const UIController = {
 
     // Initial population of employment income years
     this.populateEmploymentIncomeYears();
+
+    // Add new event listener with other initialization code
+    this.isReceivingCPP.addEventListener('change', (e) => {
+      this.cppFutureDetails.style.display = 
+        (e.target as HTMLInputElement).checked ? 'none' : 'block';
+    });
+
+    // Add new event listener alongside CPP listener
+    this.isReceivingDB.addEventListener('change', (e) => {
+      this.dbFutureDetails.style.display = 
+        (e.target as HTMLInputElement).checked ? 'none' : 'block';
+    });
+
+    // Add OAS checkbox handler
+    this.isReceivingOAS.addEventListener('change', (e) => {
+      this.oasFutureDetails.style.display = 
+        (e.target as HTMLInputElement).checked ? 'none' : 'block';
+    });
 
     // Perform an initial calculation on page load
     this.recalculateProjection();

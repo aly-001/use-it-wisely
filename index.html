@@ -152,6 +152,10 @@
           <input type="number" id="initialInvestment" value="500000" min="0">
         </div>
         <div class="input-group">
+          <label for="initialBookValue">Initial Estimated Book Value:</label>
+          <input type="number" id="initialBookValue" value="500000" min="0">
+        </div>
+        <div class="input-group">
           <label for="startYear">Current Year:</label>
           <input type="number" id="startYear" value="2024" min="2024" max="2100">
         </div>
@@ -209,13 +213,68 @@
           <label for="inflationRate">Estimated Inflation (%):</label>
           <input type="number" id="inflationRate" value="2" min="0" max="100" step="0.1">
         </div>
-        <div class="input-group">
-          <label for="oasStartYear">OAS Start Year:</label>
-          <input type="number" id="oasStartYear" value="1" min="1" max="100">
+
+        <div id="oas-section">
+          <h3>Old Age Security (OAS)</h3>
+          <div class="input-group">
+            <label>
+              <input type="checkbox" id="isReceivingOAS"> Currently receiving payments
+            </label>
+          </div>
+          
+          <div id="oas-future-details" style="margin-left: 20px;">
+            <div class="input-group">
+              <label for="oasStartAge">Start Age:</label>
+              <input type="number" id="oasStartAge" value="65" min="65" max="70">
+            </div>
+          </div>
+
+          <div class="input-group" style="margin-left: 20px;">
+            <label for="oasAnnualAmount">Annual Amount:</label>
+            <input type="number" id="oasAnnualAmount" value="8301" min="0">
+          </div>
         </div>
-        <div class="input-group">
-          <label for="oasAnnualAmount">OAS Annual Amount:</label>
-          <input type="number" id="oasAnnualAmount" value="8301" min="0">
+
+        <div id="cpp-qpp-section">
+          <h3>CPP/QPP Pension</h3>
+          <div class="input-group">
+            <label>
+              <input type="checkbox" id="isReceivingCPP"> Currently receiving payments
+            </label>
+          </div>
+          
+          <div id="cpp-future-details" style="margin-left: 20px;">
+            <div class="input-group">
+              <label for="cppStartAge">Start Age:</label>
+              <input type="number" id="cppStartAge" value="65" min="60" max="70">
+            </div>
+          </div>
+
+          <div class="input-group" style="margin-left: 20px;">
+            <label for="cppAnnualAmount">Annual Amount:</label>
+            <input type="number" id="cppAnnualAmount" value="15000" min="0">
+          </div>
+        </div>
+
+        <div id="db-pension-section">
+          <h3>Defined Benefit Pension</h3>
+          <div class="input-group">
+            <label>
+              <input type="checkbox" id="isReceivingDB"> Currently receiving payments
+            </label>
+          </div>
+          
+          <div id="db-future-details" style="margin-left: 20px;">
+            <div class="input-group">
+              <label for="dbStartAge">Start Age:</label>
+              <input type="number" id="dbStartAge" value="65" min="55" max="70">
+            </div>
+          </div>
+
+          <div class="input-group" style="margin-left: 20px;">
+            <label for="dbAnnualAmount">Annual Amount:</label>
+            <input type="number" id="dbAnnualAmount" value="0" min="0">
+          </div>
         </div>
 
         <div id="one-off-expenses-container">
@@ -224,6 +283,13 @@
           <div id="one-off-expenses-list">
             <!-- Dynamic expenses will be added here -->
           </div>
+        </div>
+
+        <div class="input-group"></div>
+          <label>
+            <input type="checkbox" id="optimizeWithdrawal">
+            Find maximum withdrawal amount
+          </label>
         </div>
 
         <button id="calculateBtn">Calculate</button>
