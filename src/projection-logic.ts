@@ -336,10 +336,38 @@ export const ProjectionLogic = {
     }
   },
 
-  calculateProjection(projection: Projection, incomeRate: number, growthRate: number): Projection {
-    for (let i = 0; i < projection.length - 1; i++) {
-      this.calculateNextYear(projection, i, incomeRate, growthRate);
+  calculateProjection(
+    projection: Projection,
+    incomeRate: number,
+    growthRate: number,
+    lumpSumWithdrawal: number = 0
+  ): Projection {
+    // Handle lump sum withdrawal in first year if applicable
+    if (projection.length > 0 && lumpSumWithdrawal > 0) {
+        const yearOne = projection[0];
+        
+        // Determine how much can be withdrawn from non-registered
+        const withdrawalAmount = Math.min(yearOne.amountInvested, lumpSumWithdrawal);
+        
+        // Calculate capital gains tax on withdrawal
+        const proportion = withdrawalAmount / yearOne.amountInvested;
+        const costBasisUsed = yearOne.investmentCostBasis * proportion;
+        const realizedGain = withdrawalAmount - costBasisUsed;
+        const cgTaxable = realizedGain > 0 ? realizedGain * 0.5 : 0;
+        const taxOnWithdrawal = calculateTax(cgTaxable);
+        
+        // Update year one values
+        yearOne.debits += withdrawalAmount + taxOnWithdrawal;
+        yearOne.amountInvested -= withdrawalAmount;
+        yearOne.investmentCostBasis -= costBasisUsed;
+        yearOne.taxPaid += taxOnWithdrawal;
     }
+
+    // Process each year
+    for (let i = 0; i < projection.length - 1; i++) {
+        this.calculateNextYear(projection, i, incomeRate, growthRate);
+    }
+    
     return projection;
   },
 

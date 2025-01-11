@@ -518,8 +518,6 @@ export const UIController = {
       }
     }
 
-
-
     const annualExpenses = Number(this.annualExpensesInput.value);
     const initialInvestment = Number(this.initialInvestmentInput.value);
     const initialBookValue = Number(this.initialBookValueInput.value);
@@ -607,6 +605,8 @@ export const UIController = {
       Number(this.stageThreeHealthcareInput.value),
       this.oneOffExpenses
     );
+    
+    
 
     const finalProjection = ProjectionLogic.calculateProjection(projection, realIncomeRate, realGrowthRate);
     this.createOrUpdateChart(finalProjection);
