@@ -378,4 +378,77 @@ export const ProjectionLogic = {
       maximumFractionDigits: 0,
     }).format(amount);
   },
+
+  findOptimalWithdrawal(
+    baseProjection: Projection,
+    incomeRate: number,
+    growthRate: number,
+    targetEstate: number = 0
+  ): { maxWithdrawal: number; finalBalance: number } {
+    const initialYear = baseProjection[0];
+    const totalAssets = initialYear.amountInvested + 
+                       initialYear.amountInRRSP + 
+                       initialYear.amountInTFSA;
+
+    let low = 0;
+    let high = totalAssets;
+    let bestWithdrawal = 0;
+    let bestFinalBalance = Infinity;
+    const TOLERANCE = 1000;
+    const MAX_ITERATIONS = 30;
+    let iterations = 0;
+
+    while (high - low > TOLERANCE && iterations < MAX_ITERATIONS) {
+      iterations++;
+      const mid = (low + high) / 2;
+
+      const testProjection = JSON.parse(JSON.stringify(baseProjection));
+      const finalProjection = this.calculateProjection(
+        testProjection,
+        incomeRate,
+        growthRate,
+        mid
+      );
+
+      // Check if we maintain positive balance until the last year
+      let isValidProjection = true;
+      for (let i = 0; i < finalProjection.length - 1; i++) {
+        const year = finalProjection[i];
+        const yearBalance = year.amountInvested + 
+                           year.amountInRRSP + 
+                           year.amountInTFSA;
+        if (yearBalance <= TOLERANCE) {
+          isValidProjection = false;
+          break;
+        }
+      }
+
+      const finalYear = finalProjection[finalProjection.length - 1];
+      const finalBalance = finalYear.amountInvested + 
+                          finalYear.amountInRRSP + 
+                          finalYear.amountInTFSA;
+
+      if (isValidProjection) {
+        // Update best result if this is valid and closer to target estate
+        if (bestWithdrawal === 0 || 
+            Math.abs(finalBalance - targetEstate) < Math.abs(bestFinalBalance - targetEstate)) {
+          bestWithdrawal = mid;
+          bestFinalBalance = finalBalance;
+        }
+      }
+
+      if (!isValidProjection || finalBalance < targetEstate) {
+        // We need to withdraw less
+        high = mid;
+      } else {
+        // We can try withdrawing more
+        low = mid;
+      }
+    }
+
+    return {
+      maxWithdrawal: bestWithdrawal,
+      finalBalance: bestFinalBalance
+    };
+  },
 };

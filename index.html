@@ -186,13 +186,16 @@
         <div class="input-group">
           <label for="rateOfReturn">Investment Risk Profile:</label>
           <select id="rateOfReturn">
-            <option value="3">Risk Averse (3%)</option>
-            <option value="4">Conservative (4%)</option>
-            <option value="5">Moderate (5%)</option>
-            <option value="6">Aggressive (6%)</option>
-            <option value="7">Speculative (7%)</option>
+            <option value="5">Risk Averse (5%)</option>
+            <option value="6">Conservative (6%)</option>
+            <option value="7">Moderate (7%)</option>
+            <option value="8">Aggressive (8%)</option>
+            <option value="9">Speculative (9%)</option>
           </select>
         </div>
+        <p>
+          Note: the rate of return specified here is calculated to be (growth rate + dividends amount). So if your growth rate is roughly 4% an your investment income is roughly 3%, select 7%.
+        </p>
         <div class="input-group">
           <label>
             <input type="checkbox" id="specifyOwnRates">
@@ -290,6 +293,15 @@
             <input type="checkbox" id="optimizeWithdrawal">
             Find maximum withdrawal amount
           </label>
+        </div>
+
+        <div class="input-group">
+          <label for="estateGoal">Amount to Leave to Heirs:</label>
+          <input type="number" id="estateGoal" value="0" min="0">
+        </div>
+        <div class="input-group">
+          <label for="deathBenefit">Death Benefit:</label>
+          <input type="number" id="deathBenefit" value="0" min="0">
         </div>
 
         <button id="calculateBtn">Calculate</button>

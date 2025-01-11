@@ -101,6 +101,10 @@ export const UIController = {
   dbAnnualAmount: document.querySelector<HTMLInputElement>('#dbAnnualAmount')!,
   dbFutureDetails: document.querySelector<HTMLDivElement>('#db-future-details')!,
 
+  // Add new DOM elements
+  estateGoalInput: document.querySelector<HTMLInputElement>('#estateGoal')!,
+  deathBenefitInput: document.querySelector<HTMLInputElement>('#deathBenefit')!,
+
   /**
    * Creates a new registered account UI element
    */
@@ -608,38 +612,46 @@ export const UIController = {
     
     
 
-    const finalProjection = ProjectionLogic.calculateProjection(projection, realIncomeRate, realGrowthRate);
+    const estateGoal = Number(this.estateGoalInput.value) || 0;
+    const deathBenefit = Number(this.deathBenefitInput.value) || 0;
+    const targetEstate = Math.max(0, estateGoal - deathBenefit);
+
+    const { maxWithdrawal, finalBalance } = ProjectionLogic.findOptimalWithdrawal(
+      projection,
+      realIncomeRate,
+      realGrowthRate,
+      targetEstate
+    );
+
+    // Run the final projection with the optimal withdrawal
+    const finalProjection = ProjectionLogic.calculateProjection(
+      projection,
+      realIncomeRate,
+      realGrowthRate,
+      maxWithdrawal
+    );
+
     this.createOrUpdateChart(finalProjection);
     this.fillProjectionTable(finalProjection);
 
-    // Display the final result
-    const finalYear = finalProjection[finalProjection.length - 1];
-    const totalFinalBalance = finalYear.amountInvested + finalYear.amountInRRSP + finalYear.amountInTFSA;
+    const yearByYear = finalProjection.map(year => {
+      const total = year.amountInvested + year.amountInRRSP + year.amountInTFSA;
+      return `Age ${year.age}: ${ProjectionLogic.formatMoney(total)}`;
+    }).join('<br/>');
 
-    if (totalFinalBalance < 0) {
-      const bankruptYear = finalProjection.find(
-        (y) => y.amountInvested + y.amountInRRSP < 0
-      );
-      this.resultDiv.innerHTML = `
-        <p style="color: red;">
-          You run out of money at age <strong>${bankruptYear?.age}</strong>.
-        </p>
-      `;
-    } else {
-      this.resultDiv.innerHTML = `
-        <p>
-          At age ${lifeExpectancy}, you have:
-          <br />
-          Investments: <strong>${ProjectionLogic.formatMoney(finalYear.amountInvested)}</strong>
-          <br />
-          RRSP: <strong>${ProjectionLogic.formatMoney(finalYear.amountInRRSP)}</strong>
-          <br />
-          TFSA: <strong>${ProjectionLogic.formatMoney(finalYear.amountInTFSA)}</strong>
-          <br />
-          Total: <strong>${ProjectionLogic.formatMoney(totalFinalBalance)}</strong>
-        </p>
-      `;
-    }
+    this.resultDiv.innerHTML = `
+      <p>
+        You can withdraw <strong>${ProjectionLogic.formatMoney(maxWithdrawal)}</strong> today
+        and still leave an estate of <strong>${ProjectionLogic.formatMoney(targetEstate)}</strong>.
+        <br/>
+        Year by year balances:
+        <br/>
+        ${yearByYear}
+      </p>
+      <p>
+        Note: we're optimizing your withdrawal so that you're left with max(0, targetEstate - deathBenefit).
+      </p>
+    `;
   },
 
   /**
